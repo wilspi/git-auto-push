@@ -2,7 +2,6 @@
 
 # Config
 verbose=true # Verbose mode
-modify_time=true # Modify commit time to time its getting pushed
 
 # No of commits to push at a time
 # Defaults to 1
@@ -55,23 +54,12 @@ else
 	push_commits=$pushing_limit
 fi
 
-current_date=$(git log -1 --format=format:%ai)
-new_date=$(date -d "$current_date - 0 hour - 0 minutes" --rfc-2822)
-
 # Checkout to last pushed commit and push code
 if [ "$commits_ahead" -gt "0" -a $(( $commits_ahead-$push_commits )) -gt "-1" ]; then
 	git checkout HEAD~$(( $commits_ahead-$push_commits )) --quiet
 	commit_sha="$(git rev-parse HEAD)"
 	if [ "$verbose" = true ]; then
 		echo "At commit: " ${commit_sha:0:7} " Pushing commits: " $push_commits
-	fi
-	if [ "$modify_time" = true ]; then
-		git filter-branch --env-filter \
-		"if test \$GIT_COMMIT = \$commit_sha
-		then
-		    export GIT_AUTHOR_DATE='\$new_date'
-		    export GIT_COMMITTER_DATE='\$new_date'
-		fi" && rm -fr "$(git rev-parse --git-dir)/refs/original/"
 	fi
 	git push origin $commit_sha:$branch_name --quiet
 
