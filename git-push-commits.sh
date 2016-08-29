@@ -56,7 +56,9 @@ else
 fi
 
 current_date=$(git log -1 --format=format:%ai)
-new_date=$(date -d "$current_date - 0 hour - 0 minutes" --rfc-2822)
+#new_date=$(date -d "$current_date - 0 hour - 0 minutes" --rfc-2822)
+#new_date="$(date --rfc-2822)" # works for gnu date util
+new_date=$(date +"%a, %d %b %Y %T %z") # works for macos
 
 # Checkout to last pushed commit and push code
 if [ "$commits_ahead" -gt "0" -a $(( $commits_ahead-$push_commits )) -gt "-1" ]; then
@@ -66,14 +68,17 @@ if [ "$commits_ahead" -gt "0" -a $(( $commits_ahead-$push_commits )) -gt "-1" ];
 		echo "At commit: " ${commit_sha:0:7} " Pushing commits: " $push_commits
 	fi
 	if [ "$modify_time" = true ]; then
-		git filter-branch --env-filter \
-		"if test \$GIT_COMMIT = \$commit_sha
-		then
-		    export GIT_AUTHOR_DATE='\$new_date'
-		    export GIT_COMMITTER_DATE='\$new_date'
-		fi" && rm -fr "$(git rev-parse --git-dir)/refs/original/"
+		git filter-branch --env-filter '
+		echo '"${commit_sha}"'
+		echo "$GIT_COMMIT"
+		if [ "${GIT_COMMIT}" = '"${commit_sha}"' ]; then
+			export GIT_AUTHOR_DATE
+			export GIT_COMMITTER_DATEq
+			GIT_AUTHOR_DATE=$(echo '"$new_date"')
+			GIT_COMMITTER_DATE=$(echo '"$new_date"')
+		fi' HEAD~$commits_ahead..HEAD && rm -fr "$(git rev-parse --git-dir)/refs/original/"
 	fi
-	git push origin $commit_sha:$branch_name --quiet
+	git push origin $commit_sha:refs/heads/$branch_name --quiet
 
 	# Back to where HEAD was
 	git checkout $branch_name --quiet
